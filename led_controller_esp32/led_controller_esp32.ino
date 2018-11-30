@@ -1,4 +1,4 @@
-#include <Adafruit_NeoPixel.h>
+#include <NeoPixelBus.h>
 //#include "BluetoothSerial.h"
 #include <WiFi.h>
 #include <WiFiUdp.h>
@@ -32,8 +32,8 @@ WiFiUDP Udp;
 //   NEO_GRB     Pixels are wired for GRB bitstream, correct for neopixel stick
 //   NEO_KHZ400  400 KHz bitstream (e.g. FLORA pixels)
 //   NEO_KHZ800  800 KHz bitstream (e.g. High Density LED strip), correct for neopixel stick
-//Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800); 
+//Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800); 
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PIXEL_COUNT, PIXEL_PIN);
 //BluetoothSerial bt;
 //const char *bt_name = "led_controller"; // Bluetoothのデバイス名
 
@@ -57,18 +57,15 @@ void setup()
   pinMode(LEFT_STICK_PIN, INPUT_PULLUP);
   pinMode(RIGHT_STICK_PIN, INPUT_PULLUP);
   pinMode(DOWN_STICK_PIN, INPUT_PULLUP);
-  strip.begin();
-  strip.setBrightness(64);
-      portDISABLE_INTERRUPTS();
-      delay(1);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+  strip.Begin();
+  strip.Show();
 
   rainbow(10, 0, PIXEL_COUNT-1) ;
   //rainbowCycle(2, 0, 8);
 
   TaskHandle_t th; //マルチタスクハンドル定義
-  xTaskCreatePinnedToCore(DisplayLED, "DisplayLED", 4096, NULL, 5, &th, 1); //マルチタスク起動
+  xTaskCreatePinnedToCore(DisplayLED, "DisplayLED", 4096, NULL, 10, &th, 0); //マルチタスク起動
+  //xTaskCreate(DisplayLED, "DisplayLED", 4096, NULL, 10, NULL); //マルチタスク起動
 
   //Serial.print("setup");
   //bt.begin(bt_name);
@@ -140,16 +137,17 @@ void DisplayLED(void *pvParameters) {
             RunningLights(255, 255,  0, 80, 0, 6, 1);
             break;
           case  0:  //なし
-           portDISABLE_INTERRUPTS();
-           for(int i=0; i<strip.numPixels(); i++) {
-              strip.setPixelColor(i, strip.Color(0, 0, 0));
+           //portDISABLE_INTERRUPTS();
+           for(int i=0; i<PIXEL_COUNT; i++) {
+              strip.SetPixelColor(i, RgbColor(0, 0, 0));
               delay(1);  //安定待ち
            }
            //
            //delay(10);  //安定待ち
-           delay(50);
-           strip.show();
-           portENABLE_INTERRUPTS();
+           delay(10);
+           strip.Show();
+           delay(10);
+           //portENABLE_INTERRUPTS();
            break;
         }
 
@@ -285,20 +283,20 @@ void RunningLights(uint8_t red, uint8_t green, uint8_t blue, int WaveDelay, int 
         uint8_t tmp_r = pow(level,2)*red;
         uint8_t tmp_g = pow(level,2)*green;
         uint8_t tmp_b = pow(level,2)*blue;                
-        //strip.setPixelColor(i, strip.Color((uint8_t)(level*red), (uint8_t)(level*green), (uint8_t)(level*blue)));
-        //strip.setPixelColor(i,strip.Color(red, green, blue));
-        //strip.setPixelColor(i,strip.Color(red/2+10*(i+Position), green/2+10*(i+Position), blue/2+10*(i+Position)));
-        strip.setPixelColor(i,strip.Color(tmp_r, tmp_g, tmp_b));
+        //strip.SetPixelColor(i, RgbColor((uint8_t)(level*red), (uint8_t)(level*green), (uint8_t)(level*blue)));
+        //strip.SetPixelColor(i,RgbColor(red, green, blue));
+        //strip.SetPixelColor(i,RgbColor(red/2+10*(i+Position), green/2+10*(i+Position), blue/2+10*(i+Position)));
+        strip.SetPixelColor(i,RgbColor(tmp_r, tmp_g, tmp_b));
         delay(2);
-        //strip.setPixelColor(i,
-        //  strip.Color(((sin(i+Position) * 127 + 128)/255)*red,
+        //strip.SetPixelColor(i,
+        //  RgbColor(((sin(i+Position) * 127 + 128)/255)*red,
         //              ((sin(i+Position) * 127 + 128)/255)*green,
         //              ((sin(i+Position) * 127 + 128)/255)*blue));
       }
-      portDISABLE_INTERRUPTS();
+      //portDISABLE_INTERRUPTS();
       delay(1);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+      strip.Show();
+      //portENABLE_INTERRUPTS();
     
       if(g_stick_pos_is_changed == true) return;
       delay(WaveDelay);
@@ -340,22 +338,22 @@ void RunningLightsToCenter(uint8_t red, uint8_t green, uint8_t blue, int WaveDel
         uint8_t tmp_r = pow(level,2)*red;
         uint8_t tmp_g = pow(level,2)*green;
         uint8_t tmp_b = pow(level,2)*blue;                
-        //strip.setPixelColor(i, strip.Color((uint8_t)(level*red), (uint8_t)(level*green), (uint8_t)(level*blue)));
-        //strip.setPixelColor(i,strip.Color(red, green, blue));
-        //strip.setPixelColor(i,strip.Color(red/2+10*(i+Position), green/2+10*(i+Position), blue/2+10*(i+Position)));
-        strip.setPixelColor(i,strip.Color(tmp_r, tmp_g, tmp_b));
-        strip.setPixelColor(end_led-(i-start_led), strip.Color(tmp_r, tmp_g, tmp_b));
+        //strip.SetPixelColor(i, RgbColor((uint8_t)(level*red), (uint8_t)(level*green), (uint8_t)(level*blue)));
+        //strip.SetPixelColor(i,RgbColor(red, green, blue));
+        //strip.SetPixelColor(i,RgbColor(red/2+10*(i+Position), green/2+10*(i+Position), blue/2+10*(i+Position)));
+        strip.SetPixelColor(i,RgbColor(tmp_r, tmp_g, tmp_b));
+        strip.SetPixelColor(end_led-(i-start_led), RgbColor(tmp_r, tmp_g, tmp_b));
         delay(2);
-        //strip.setPixelColor(i,
-        //  strip.Color(((sin(i+Position) * 127 + 128)/255)*red,
+        //strip.SetPixelColor(i,
+        //  RgbColor(((sin(i+Position) * 127 + 128)/255)*red,
         //              ((sin(i+Position) * 127 + 128)/255)*green,
         //              ((sin(i+Position) * 127 + 128)/255)*blue));
       }
-      strip.setPixelColor((end_led-start_led)/2,strip.Color(red, green, blue));
-      portDISABLE_INTERRUPTS();
+      strip.SetPixelColor((end_led-start_led)/2,RgbColor(red, green, blue));
+      //portDISABLE_INTERRUPTS();
       delay(2);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+      strip.Show();
+      //portENABLE_INTERRUPTS();
 
       if(g_stick_pos_is_changed == true) return;
       delay(WaveDelay);
@@ -371,17 +369,17 @@ void theaterChase(uint8_t red, uint8_t green, uint8_t blue, int SpeedDelay, int 
   for (int j=0; j < 5; j++) {     // cycle all 256 colors in the wheel
     for (int q=0; q < 3; q++) {
         for (int i=start_led; i<= end_led-q; i=i+3) {
-          strip.setPixelColor(i+q,  strip.Color(red, green, blue));
+          strip.SetPixelColor(i+q,  RgbColor(red, green, blue));
         }
-      portDISABLE_INTERRUPTS();
+      //portDISABLE_INTERRUPTS();
       delay(2);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+      strip.Show();
+      //portENABLE_INTERRUPTS();
         if(g_stick_pos_is_changed == true) return;
         delay(SpeedDelay);
        
         for (int i=start_led; i <=  end_led; i=i+3) {
-          strip.setPixelColor(i+q, strip.Color(0, 0, 0)); //turn every third pixel off 
+          strip.SetPixelColor(i+q, RgbColor(0, 0, 0)); //turn every third pixel off 
         }
     }
   }
@@ -395,19 +393,19 @@ void theaterChaseRainbow(int SpeedDelay,  int start_led, int end_led) {
   for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
     for (int q=0; q < 3; q++) {
         for (int i=start_led; i<= end_led-q; i=i+3) {
-          strip.setPixelColor(i+q,  Wheel( (i+j) % 255));
+          strip.SetPixelColor(i+q,  Wheel( (i+j) % 255));
         }
 
-      portDISABLE_INTERRUPTS();
+      //portDISABLE_INTERRUPTS();
       delay(2);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+      strip.Show();
+      //portENABLE_INTERRUPTS();
 
         if(g_stick_pos_is_changed == true) return;
         delay(SpeedDelay);
        
         for (int i=start_led; i <=  end_led; i=i+3) {
-          strip.setPixelColor(i+q, strip.Color(0, 0, 0)); //turn every third pixel off 
+          strip.SetPixelColor(i+q, RgbColor(0, 0, 0)); //turn every third pixel off 
         }
     }
   }
@@ -422,12 +420,12 @@ void rainbowCycle(int SpeedDelay,  int start_led, int end_led) {
 
   for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
     for (int i=start_led; i<= end_led; i++) {
-      strip.setPixelColor(i, Wheel(((i * 256 / (end_led-start_led)) + j) & 255));
+      strip.SetPixelColor(i, Wheel(((i * 256 / (end_led-start_led)) + j) & 255));
     }
-    portDISABLE_INTERRUPTS();
+    //portDISABLE_INTERRUPTS();
     delay(2);  //安定待ち
-    strip.show();
-    portENABLE_INTERRUPTS();
+    strip.Show();
+    //portENABLE_INTERRUPTS();
       
     if(g_stick_pos_is_changed == true) return;
     delay(SpeedDelay);
@@ -442,12 +440,12 @@ void rainbow(uint8_t wait, int start_led, int end_led) {
 
   for(j=0; j<256; j++) {
     for(i=start_led; i<=end_led; i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
+      strip.SetPixelColor(i, Wheel((i+j) & 255));
     }
-      portDISABLE_INTERRUPTS();
+      //portDISABLE_INTERRUPTS();
       delay(2);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+      strip.Show();
+      //portENABLE_INTERRUPTS();
       
     if(g_stick_pos_is_changed == true) return;
     delay(wait);
@@ -460,32 +458,32 @@ void rainbow(uint8_t wait, int start_led, int end_led) {
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
+RgbColor Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    return RgbColor(255 - WheelPos * 3, 0, WheelPos * 3);
   }
   if(WheelPos < 170) {
     WheelPos -= 85;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return RgbColor(0, WheelPos * 3, 255 - WheelPos * 3);
   }
   WheelPos -= 170;
-  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  return RgbColor(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
 void set_led_out_of_range(int start_led, int end_led){
   int i;
   
   for(i=0; i<start_led ;i++){
-     strip.setPixelColor(i, strip.Color(0, 0, 0));
+     strip.SetPixelColor(i, RgbColor(0, 0, 0));
   }
-  if(end_led < strip.numPixels()){
-    for(i=(end_led+1) ; i<strip.numPixels();i++){
-      strip.setPixelColor(i, strip.Color(0, 0, 0));
+  if(end_led < PIXEL_COUNT){
+    for(i=(end_led+1) ; i<PIXEL_COUNT;i++){
+      strip.SetPixelColor(i, RgbColor(0, 0, 0));
     }
   }
-      portDISABLE_INTERRUPTS();
+      //portDISABLE_INTERRUPTS();
       delay(1);  //安定待ち
-      strip.show();
-      portENABLE_INTERRUPTS();
+      strip.Show();
+      //portENABLE_INTERRUPTS();
 }
